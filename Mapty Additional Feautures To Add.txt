@@ -1,20 +1,21 @@
-Additional Feautures 
+Additional Feautures:
 
--Ability to edit a workout;
 
--Ability to delete a workout;
+-Ability to delete a workout ✅
 
--Ability to delete all workouts;
-
--Ability to stort workouts by certain fields;
+-Ability to delete all workouts ✅
 
 -Re-Build Running and Cycling objects coming from Local Storage ✅
 
--Implement more realistic error and confirmation messages;
+-Implement more realistic error and confirmation messages ✅
+
+-Ability to draw lines and shapes instead of just points [very hard] ✅
+
+-Ability to edit a workout
+
+-Ability to sort workouts by certain fields
 
 -Ability to position the map to show all workouts [very hard];
-
--Ability to draw lines and shapes instead of just points [very hard];
 
 -Geocode location from coordinates (`Run in Faro,Portugal`) [only after asynchronous Javascript section];
 

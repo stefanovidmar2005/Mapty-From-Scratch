@@ -16,7 +16,7 @@ const alertMessage = document.querySelector('.alert__messages');
 
 class Workout {
   date = new Date();
-  id = `${+this.date}`.slice(10);
+  id = Math.random() + '';
   constructor(coords, distance, duration) {
     this.coords = coords; // array of coords
     this.distance = distance; // in km
@@ -271,9 +271,15 @@ class App {
           this.#intl
         }`
       )
-
       .addTo(this.#map)
       .openPopup();
+
+    L.circle(Workout.coords, {
+      color: `${Workout.type === 'running' ? '#00c46a' : '#ffb545'}`,
+      fillColor: `${Workout.type === 'running' ? '#00c46a' : '#ffb545'}`,
+      fillOpacity: 0.5,
+      radius: 50,
+    }).addTo(this.#map);
   }
   _moveToWorkout(e) {
     const target = e.target.closest('.workout');
@@ -309,6 +315,7 @@ class App {
       setTimeout(() => {
         clearTimeout(alertMessageTimeout);
         alertMessage.classList.add('alert__messages-hidden');
+        location.reload();
       }, 1500);
     }
   }
