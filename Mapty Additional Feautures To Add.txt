@@ -1,0 +1,21 @@
+Additional Feautures 
+
+-Ability to edit a workout;
+
+-Ability to delete a workout;
+
+-Ability to delete all workouts;
+
+-Ability to stort workouts by certain fields;
+
+-Re-Build Running and Cycling objects coming from Local Storage ✅
+
+-Implement more realistic error and confirmation messages;
+
+-Ability to position the map to show all workouts [very hard];
+
+-Ability to draw lines and shapes instead of just points [very hard];
+
+-Geocode location from coordinates (`Run in Faro,Portugal`) [only after asynchronous Javascript section];
+
+-Display weather data for wokrout time and place [only after asynchronous Javascript Section];

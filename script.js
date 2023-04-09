@@ -11,10 +11,12 @@ const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 const imgLogo = document.querySelector('.logo');
+const deleteAllButton = document.querySelector('.delete-workouts-button');
+const alertMessage = document.querySelector('.alert__messages');
 
 class Workout {
   date = new Date();
-  id = `${+this.date}`.slice(5);
+  id = `${+this.date}`.slice(10);
   constructor(coords, distance, duration) {
     this.coords = coords; // array of coords
     this.distance = distance; // in km
@@ -63,8 +65,17 @@ class App {
     form.addEventListener('change', this._toggleElevationField);
     form.addEventListener('submit', this._newWorkout.bind(this));
     containerWorkouts.addEventListener('click', this._moveToWorkout.bind(this));
+
     // loading all workouts from the local Storage
     this._getWorkoutsFromLocalStorage();
+    localStorage.clear();
+    this.#workouts.forEach(workout => this._setWorkoutsInLocalStorage(workout));
+
+    // SHOW DELETE BUTTON IF THERE ARE WORKOUTS FROM LOCAL STORAGE
+    if (localStorage.length > 0) {
+      deleteAllButton.classList.remove('workouts-button-hidden');
+      deleteAllButton.addEventListener('click', this._resetMap.bind(this));
+    }
   }
 
   _getPosition() {
@@ -127,7 +138,7 @@ class App {
         !allPositives(distance, duration, cadence) ||
         !validInputs(distance, duration, cadence)
       )
-        return alert('Inputs Must Be Positive');
+        return this._workoutAlertMessage('red', 'All inputs must be positive.');
       workout = new Running(coordsArray, distance, duration, cadence);
     }
     if (type === 'cycling') {
@@ -150,6 +161,25 @@ class App {
     this._renderWorkoutMarker(workout);
     // setting the workout in the local storage
     this._setWorkoutsInLocalStorage(workout);
+    // show the button after a new workout has been created
+
+    deleteAllButton.classList.remove('workouts-button-hidden');
+
+    // show the delete all workouts button
+    deleteAllButton.addEventListener('click', this._resetMap.bind(this));
+
+    // alert message
+    const alertMessageTimeout = setTimeout(
+      this._workoutAlertMessage,
+      0,
+      'green',
+      'Workout has been added to the list'
+    );
+
+    setTimeout(() => {
+      clearTimeout(alertMessageTimeout);
+      alertMessage.classList.add('alert__messages-hidden');
+    }, 1500);
   }
   _hideForm() {
     form.classList.add('hidden');
@@ -161,7 +191,12 @@ class App {
   _renderWorkout(workout) {
     let html = `
     <li class="workout workout--${workout.type}" data-id="${workout.id}">
+    <div class="flex-items">
     <h2 class="workout__title">Running on ${this.#intl}</h2>
+    <button class='delete-individual-workout'>X</button>
+    </div>
+    <div class="workout__flex">
+
     <div class="workout__details">
       <span class="workout__icon">${this._workoutComparison(
         workout.type,
@@ -210,6 +245,8 @@ class App {
       )}
       </span>
     </div>
+    </div>
+    
   </li>`;
     return html;
   }
@@ -246,10 +283,34 @@ class App {
     const targetOBJECT = this.#workouts.find(
       workout => workout.id === targetID
     );
-    this.#map.setView(targetOBJECT.coords, 19, {
-      animate: true,
-      duration: 0.5,
-    });
+    if (!e.target.classList.contains('delete-individual-workout')) {
+      this.#map.setView(targetOBJECT.coords, 19, {
+        animate: true,
+        duration: 0.5,
+      });
+    } else {
+      const filteredWorkouts = this.#workouts.filter(
+        workout => workout.id !== targetOBJECT.id
+      );
+      // filter out the workout that is to be deleted from the array of workouts
+      this.#workouts = filteredWorkouts;
+      if (!this.#workouts.length > 0)
+        deleteAllButton.classList.add('workouts-button-hidden');
+      // clear local storage as well
+      this._removeIndividualLocalStorageItem(targetOBJECT);
+      target.remove();
+      const alertMessageTimeout = setTimeout(
+        this._workoutAlertMessage,
+        0,
+        'red',
+        'Workout have been removed.'
+      );
+
+      setTimeout(() => {
+        clearTimeout(alertMessageTimeout);
+        alertMessage.classList.add('alert__messages-hidden');
+      }, 1500);
+    }
   }
   _setWorkoutsInLocalStorage(workout) {
     localStorage.setItem(`${workout.id}`, JSON.stringify(workout));
@@ -284,6 +345,24 @@ class App {
     this.#workouts = [];
     localStorage.clear();
     location.reload();
+  }
+  _removeIndividualLocalStorageItem(WorkoutItem) {
+    localStorage.removeItem(WorkoutItem.id);
+  }
+  _workoutAlertMessage(color, message) {
+    alertMessage.classList.remove('alert__messages-hidden');
+    if (color === 'green') {
+      if (alertMessage.classList.contains('alert-messages-red'))
+        alertMessage.classList.remove('alert-messages-red');
+      alertMessage.classList.add('alert-messages-green');
+      alertMessage.textContent = message;
+    }
+    if (color === 'red') {
+      if (alertMessage.classList.contains('alert-messages-green'))
+        alertMessage.classList.remove('alert-messages-green');
+      alertMessage.classList.add('alert-messages-red');
+      alertMessage.textContent = message;
+    }
   }
 }
 const app = new App();
