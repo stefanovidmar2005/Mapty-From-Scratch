@@ -490,9 +490,19 @@ class App {
         'Workout has been edited'
       );
 
+      setTimeout(() => {
+        clearTimeout(alertMessageTimeout);
+        alertMessage.classList.add('alert__messages-hidden');
+      }, 1500);
+
       matchingListItem.remove();
-      console.log(this.#targetObject);
       this._removeIndividualLocalStorageItem(this.#targetObject);
+      // filter the array without the one edited / removed
+
+      const filteredArrayOfWorkouts = this.#workouts.filter(workout => {
+        return workout.id !== this.#targetObject.id;
+      });
+      this.#workouts = filteredArrayOfWorkouts;
     }
   }
 }
