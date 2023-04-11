@@ -50,6 +50,7 @@ class App {
   // private fields
   // storing all the workouts
   #workouts = [];
+  #targetObject;
   // map element
   #map;
   #mapEvent;
@@ -58,14 +59,16 @@ class App {
     month: 'long',
     day: '2-digit',
   }).format(this.#currentDate);
+  #editState = false;
   constructor() {
     // get current Position
     this._getPosition();
     // toggle the elevation Field when workout is changed
     form.addEventListener('change', this._toggleElevationField);
     form.addEventListener('submit', this._newWorkout.bind(this));
+    form.addEventListener('submit', this._editOnSubmit.bind(this));
     containerWorkouts.addEventListener('click', this._moveToWorkout.bind(this));
-
+    // containerWorkouts.addEventListener('click', this._editWorkout.bind(this));
     // loading all workouts from the local Storage
     this._getWorkoutsFromLocalStorage();
     localStorage.clear();
@@ -88,7 +91,7 @@ class App {
   _loadMap(pos) {
     const { latitude, longitude } = pos.coords;
     const coordsArray = [latitude, longitude];
-    this.#map = L.map('map').setView(coordsArray, 18);
+    this.#map = L.map('map').setView(coordsArray, 13);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution:
@@ -122,64 +125,68 @@ class App {
   }
   _newWorkout(e) {
     e.preventDefault();
-    let workout;
-    const type = inputType.value;
-    const distance = +inputDistance.value;
-    const duration = +inputDuration.value;
+    if (this.#editState !== true) {
+      let workout;
+      const type = inputType.value;
+      const distance = +inputDistance.value;
+      const duration = +inputDuration.value;
+      const validInputs = (...inputs) =>
+        inputs.every(inp => Number.isFinite(inp));
+      const allPositives = (...inputs) => inputs.every(input => input > 0);
+      const { lat, lng } = this.#mapEvent.latlng;
+      const coordsArray = [lat, lng];
+      if (type === 'running') {
+        const cadence = +inputCadence.value;
+        if (
+          !allPositives(distance, duration, cadence) ||
+          !validInputs(distance, duration, cadence)
+        )
+          return this._workoutAlertMessage(
+            'red',
+            'All inputs must be positive.'
+          );
+        workout = new Running(coordsArray, distance, duration, cadence);
+      }
+      if (type === 'cycling') {
+        const elevation = +inputElevation.value;
+        if (
+          !allPositives(distance, duration) ||
+          !validInputs(distance, duration, elevation)
+        )
+          return alert('Inputs Must Be Positive');
 
-    const validInputs = (...inputs) =>
-      inputs.every(inp => Number.isFinite(inp));
-    const allPositives = (...inputs) => inputs.every(input => input > 0);
-    const { lat, lng } = this.#mapEvent.latlng;
-    const coordsArray = [lat, lng];
-    if (type === 'running') {
-      const cadence = +inputCadence.value;
-      if (
-        !allPositives(distance, duration, cadence) ||
-        !validInputs(distance, duration, cadence)
-      )
-        return this._workoutAlertMessage('red', 'All inputs must be positive.');
-      workout = new Running(coordsArray, distance, duration, cadence);
+        workout = new Cycling(coordsArray, distance, duration, elevation);
+      }
+      // pushing the workout to the workouts array
+      this.#workouts.push(workout);
+      // hiding the form
+      this._hideForm();
+      // rendering the workout in the list
+      form.insertAdjacentHTML('afterend', this._renderWorkout(workout));
+      // render out workout marker on the map
+      this._renderWorkoutMarker(workout);
+      // setting the workout in the local storage
+      this._setWorkoutsInLocalStorage(workout);
+      // show the button after a new workout has been created
+
+      deleteAllButton.classList.remove('workouts-button-hidden');
+
+      // show the delete all workouts button
+      deleteAllButton.addEventListener('click', this._resetMap.bind(this));
+
+      // alert message
+      const alertMessageTimeout = setTimeout(
+        this._workoutAlertMessage,
+        0,
+        'green',
+        'Workout has been added to the list'
+      );
+
+      setTimeout(() => {
+        clearTimeout(alertMessageTimeout);
+        alertMessage.classList.add('alert__messages-hidden');
+      }, 1500);
     }
-    if (type === 'cycling') {
-      const elevation = +inputElevation.value;
-      if (
-        !allPositives(distance, duration) ||
-        !validInputs(distance, duration, elevation)
-      )
-        return alert('Inputs Must Be Positive');
-
-      workout = new Cycling(coordsArray, distance, duration, elevation);
-    }
-    // pushing the workout to the workouts array
-    this.#workouts.push(workout);
-    // hiding the form
-    this._hideForm();
-    // rendering the workout in the list
-    form.insertAdjacentHTML('afterend', this._renderWorkout(workout));
-    // render out workout marker on the map
-    this._renderWorkoutMarker(workout);
-    // setting the workout in the local storage
-    this._setWorkoutsInLocalStorage(workout);
-    // show the button after a new workout has been created
-
-    deleteAllButton.classList.remove('workouts-button-hidden');
-
-    // show the delete all workouts button
-    deleteAllButton.addEventListener('click', this._resetMap.bind(this));
-
-    // alert message
-    const alertMessageTimeout = setTimeout(
-      this._workoutAlertMessage,
-      0,
-      'green',
-      'Workout has been added to the list'
-    );
-
-    setTimeout(() => {
-      clearTimeout(alertMessageTimeout);
-      alertMessage.classList.add('alert__messages-hidden');
-    }, 1500);
   }
   _hideForm() {
     form.classList.add('hidden');
@@ -192,8 +199,14 @@ class App {
     let html = `
     <li class="workout workout--${workout.type}" data-id="${workout.id}">
     <div class="flex-items">
-    <h2 class="workout__title">Running on ${this.#intl}</h2>
-    <button class='delete-individual-workout'>X</button>
+    <h2 class="workout__title">${workout.type[0].toUpperCase()}${workout.type.slice(
+      1
+    )} on ${this.#intl}</h2>
+    <div class="workout__controls">
+    <img src="./edit (1).png" class="edit-workout">
+    <button class='delete-individual-workout'>×</button>
+    </div>
+    
     </div>
     <div class="workout__flex">
 
@@ -289,8 +302,13 @@ class App {
     const targetOBJECT = this.#workouts.find(
       workout => workout.id === targetID
     );
+
+    if (e.target.classList.contains('edit-workout')) {
+      this._editWorkout(e);
+    }
+
     if (!e.target.classList.contains('delete-individual-workout')) {
-      this.#map.setView(targetOBJECT.coords, 19, {
+      this.#map.setView(targetOBJECT.coords, 13, {
         animate: true,
         duration: 0.5,
       });
@@ -371,5 +389,112 @@ class App {
       alertMessage.textContent = message;
     }
   }
+  _editWorkout(e) {
+    this.#editState = true;
+    const elvationGainRow = inputElevation.closest('.form__row');
+    const cadenceRow = inputCadence.closest('.form__row');
+    const target = e.target.closest('.workout');
+    // guard clause
+    if (!target?.classList?.contains('workout')) return;
+    const targetID = target.dataset.id;
+
+    this.#targetObject = this.#workouts.find(
+      workout => workout.id === targetID
+    );
+
+    // new Array after EDITING THE WOKROUT
+
+    // target.remove();
+    this._showForm(this.#mapEvent);
+    inputDistance.value = this.#targetObject.distance;
+    inputDuration.value = this.#targetObject.duration;
+    inputType.value = this.#targetObject.type;
+
+    if (this.#targetObject.type === 'cycling') {
+      elvationGainRow.classList.remove('form__row--hidden');
+      cadenceRow.classList.add('form__row--hidden');
+    }
+    if (this.#targetObject.type === 'running') {
+      elvationGainRow.classList.add('form__row--hidden');
+      cadenceRow.classList.remove('form__row--hidden');
+    }
+
+    this._workoutComparison(
+      this.#targetObject.type,
+      (inputCadence.value = this.#targetObject.cadence),
+      (inputElevation.value = this.#targetObject.elevation)
+    );
+  }
+  _editOnSubmit(e) {
+    //  TODO: the map element at the begging is undefined only when we click on the map itself it triggers the mapEvent to equal somthing show form example to refer to later
+    e.preventDefault();
+    if (this.#editState == true) {
+      const allListItems = Array.from(document.querySelectorAll('.workout'));
+      const matchingListItem = allListItems
+        .filter(workoutList => workoutList.dataset.id === this.#targetObject.id)
+        .pop();
+
+      let workout;
+      const type = inputType.value;
+      const distance = +inputDistance.value;
+      const duration = +inputDuration.value;
+      const validInputs = (...inputs) =>
+        inputs.every(inp => Number.isFinite(inp));
+      const allPositives = (...inputs) => inputs.every(input => input > 0);
+      const { lat, lng } = this.#mapEvent.latlng;
+      const coordsArray = [lat, lng];
+      if (type === 'running') {
+        const cadence = +inputCadence.value;
+        if (
+          !allPositives(distance, duration, cadence) ||
+          !validInputs(distance, duration, cadence)
+        )
+          return this._workoutAlertMessage(
+            'red',
+            'All inputs must be positive.'
+          );
+        workout = new Running(coordsArray, distance, duration, cadence);
+      }
+      if (type === 'cycling') {
+        const elevation = +inputElevation.value;
+        if (
+          !allPositives(distance, duration) ||
+          !validInputs(distance, duration, elevation)
+        )
+          return alert('Inputs Must Be Positive');
+
+        workout = new Cycling(coordsArray, distance, duration, elevation);
+      }
+      // pushing the workout to the workouts array
+      this.#workouts.push(workout);
+      // hiding the form
+      this._hideForm();
+      // rendering the workout in the list
+      form.insertAdjacentHTML('afterend', this._renderWorkout(workout));
+      // render out workout marker on the map
+      this._renderWorkoutMarker(workout);
+      // setting the workout in the local storage
+      this._setWorkoutsInLocalStorage(workout);
+      // show the button after a new workout has been created
+
+      deleteAllButton.classList.remove('workouts-button-hidden');
+
+      // show the delete all workouts button
+      deleteAllButton.addEventListener('click', this._resetMap.bind(this));
+
+      // alert message
+      const alertMessageTimeout = setTimeout(
+        this._workoutAlertMessage,
+        0,
+        'red',
+        'Workout has been edited'
+      );
+
+      matchingListItem.remove();
+      console.log(this.#targetObject);
+      this._removeIndividualLocalStorageItem(this.#targetObject);
+    }
+  }
 }
+
 const app = new App();

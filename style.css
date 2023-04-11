@@ -112,6 +112,15 @@ a:visited {
   align-items: center;
   gap: 2rem;
 }
+.workout__controls {
+  display: flex;
+  align-items: center;
+}
+.edit-workout {
+  width: 17px;
+  height: 17px;
+  margin-top: -0.4rem;
+}
 .workout--running {
   border-left: 10px solid var(--color-brand--2);
 }
@@ -146,14 +155,16 @@ a:visited {
   font-weight: 800;
 }
 .delete-individual-workout {
-  background-color: crimson;
+  color: crimson;
+  background: none;
   border: 0;
-  color: #fff;
+  /* color: #fff; */
   padding: 0.5rem 1rem;
   border-radius: 100vw;
   cursor: pointer;
   text-transform: uppercase;
   font-family: 'Teko', sans-serif;
+  font-size: 2.5rem;
 }
 .form {
   background-color: var(--color-dark--2);
