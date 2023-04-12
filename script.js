@@ -203,7 +203,7 @@ class App {
       1
     )} on ${this.#intl}</h2>
     <div class="workout__controls">
-    <img src="./edit (1).png" class="edit-workout">
+    <img src="./paper.png" class="edit-workout">
     <button class='delete-individual-workout'>×</button>
     </div>
     
@@ -312,7 +312,9 @@ class App {
         animate: true,
         duration: 0.5,
       });
-    } else {
+    }
+
+    if (this.#editState !== true) {
       const filteredWorkouts = this.#workouts.filter(
         workout => workout.id !== targetOBJECT.id
       );
@@ -334,6 +336,19 @@ class App {
         clearTimeout(alertMessageTimeout);
         alertMessage.classList.add('alert__messages-hidden');
         location.reload();
+      }, 1500);
+    }
+    if (this.#editState) {
+      const alertMessageTimeout = setTimeout(
+        this._workoutAlertMessage,
+        0,
+        'red',
+        'Cannot delete workout while in edit mode'
+      );
+
+      setTimeout(() => {
+        clearTimeout(alertMessageTimeout);
+        alertMessage.classList.add('alert__messages-hidden');
       }, 1500);
     }
   }
@@ -377,16 +392,39 @@ class App {
   _workoutAlertMessage(color, message) {
     alertMessage.classList.remove('alert__messages-hidden');
     if (color === 'green') {
-      if (alertMessage.classList.contains('alert-messages-red'))
+      if (
+        alertMessage.classList.contains('alert-messages-red') ||
+        alertMessage.classList.contains('alert-messages-yellow')
+      ) {
         alertMessage.classList.remove('alert-messages-red');
+        alertMessage.classList.remove('alert-messages-yellow');
+      }
+
       alertMessage.classList.add('alert-messages-green');
       alertMessage.textContent = message;
     }
     if (color === 'red') {
-      if (alertMessage.classList.contains('alert-messages-green'))
+      if (
+        alertMessage.classList.contains('alert-messages-green') ||
+        alertMessage.classList.contains('alert-messages-yellow')
+      ) {
         alertMessage.classList.remove('alert-messages-green');
-      alertMessage.classList.add('alert-messages-red');
-      alertMessage.textContent = message;
+        alertMessage.classList.remove('alert-messages-yellow');
+        alertMessage.classList.add('alert-messages-red');
+        alertMessage.textContent = message;
+      }
+    }
+
+    if (color === 'yellow') {
+      if (
+        alertMessage.classList.contains('alert-messages-green') ||
+        alertMessage.classList.contains('alert-messages-red')
+      ) {
+        alertMessage.classList.remove('alert-messages-green');
+        alertMessage.classList.remove('alert-messages-red');
+        alertMessage.classList.add('alert-messages-yellow');
+        alertMessage.textContent = message;
+      }
     }
   }
   _editWorkout(e) {
@@ -486,7 +524,7 @@ class App {
       const alertMessageTimeout = setTimeout(
         this._workoutAlertMessage,
         0,
-        'red',
+        'yellow',
         'Workout has been edited'
       );
 
@@ -504,6 +542,9 @@ class App {
       });
       this.#workouts = filteredArrayOfWorkouts;
     }
+    // change the edit state back to false once submitted
+
+    this.#editState = false;
   }
 }
 

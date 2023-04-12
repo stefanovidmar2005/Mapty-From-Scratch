@@ -293,3 +293,6 @@ a:visited {
 .alert-messages-green {
   background-color: var(--color-brand--2);
 }
+.alert-messages-yellow {
+  background-color: var(--color-brand--1);
+}
